@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Docs — boxtty</title>
+  <meta name="description" content="boxtty documentation: install, connect Gmail, keyboard shortcuts, search operators, compose, snooze & schedule, filters, AI assist, multiple accounts, settings, the CLI and Lua scripting." />
+  <meta name="theme-color" content="#0c0c0f" />
+  <link rel="icon" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap inner">
+      <a class="brand" href="index.html">
+        <svg class="mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3" y="4.5" width="18" height="15" rx="3" stroke="#3551f3" stroke-width="1.7" fill="rgba(53,81,243,0.10)" />
+          <rect class="cursor" x="9" y="13.2" width="6" height="2" rx="0.6" fill="#3551f3" />
+        </svg>
+        <span class="brand-name">boxtty</span>
+      </a>
+      <span class="spacer"></span>
+      <a class="hlink" href="features.html">Features</a>
+      <a class="hlink" href="docs.html">Docs</a>
+      <a class="hlink" href="download.html">Download</a>
+      <a class="hlink" href="https://github.com/notnaki/boxtty">GitHub</a>
+    </div>
+  </header>
+
+  <main class="wrap doc">
+    <div class="doc-grid">
+      <nav class="doc-toc">
+        <span class="label">Documentation</span>
+        <a href="#overview">Overview</a>
+        <a href="#install">Install &amp; build</a>
+        <a href="#connect">Connect Gmail</a>
+        <a href="#accounts">Multiple accounts</a>
+        <a href="#keyboard">Keyboard</a>
+        <a href="#search">Search</a>
+        <a href="#compose">Compose</a>
+        <a href="#snooze">Snooze &amp; schedule</a>
+        <a href="#filters">Filters</a>
+        <a href="#ai">AI assist</a>
+        <a href="#settings">Settings</a>
+        <a href="#cli">CLI</a>
+        <a href="#lua">Lua scripting</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+      </nav>
+
+      <article class="doc-content">
+        <h1>Documentation</h1>
+        <p class="doc-lede">boxtty is a native SwiftUI Gmail client for macOS — keyboard-first, local-first, and scriptable. This covers setup through automation.</p>
+
+        <section id="overview">
+          <h2>Overview</h2>
+          <p>boxtty talks to Gmail's REST API directly and keeps your working set in memory, so the UI is instant. Every mutation — archive, star, trash, snooze, send — is optimistic, with an undo toast, and reconciles against the server in the background. New mail is pushed over IMAP <code>IDLE</code> rather than polled.</p>
+          <p>All state lives under <code>~/.config/boxtty</code> as plain JSON and TOML. Nothing is sent anywhere except Gmail and, if you opt in, the AI provider you choose. The default AI runs on-device.</p>
+          <p>Requirements: <strong>macOS 14+</strong>. Apple Intelligence features need macOS 26+ with Apple Intelligence enabled.</p>
+        </section>
+
+        <section id="install">
+          <h2>Install &amp; build</h2>
+          <p>boxtty is in open beta and built from source. You'll need Xcode and <a class="ilink" href="https://github.com/yonaskolb/XcodeGen">XcodeGen</a> (<code>brew install xcodegen</code>).</p>
+          <pre><code>git clone https://github.com/notnaki/boxtty
+cd boxtty/boxtty-mac
+./build.sh                 # → dist/Boxtty.app and dist/boxtty
+open dist/Boxtty.app</code></pre>
+          <p>Or from Xcode:</p>
+          <pre><code>xcodegen generate
+open Boxtty.xcodeproj       # ⌘R</code></pre>
+          <p>On first launch with no account connected, boxtty runs against in-memory mock data so you can try the UI immediately.</p>
+        </section>
+
+        <section id="connect">
+          <h2>Connect Gmail</h2>
+          <p>boxtty uses your own Google OAuth <strong>Desktop</strong> client — no shared app, no middleman. Create one in the Google Cloud console, then drop the credentials in an untracked file:</p>
+          <pre><code># ~/.config/boxtty/oauth.toml
+client_id = "…apps.googleusercontent.com"
+client_secret = "…"</code></pre>
+          <div class="note"><p>The OAuth client must list <code>http://127.0.0.1:8000</code> as an authorized redirect URI and request the <code>https://mail.google.com/</code> scope.</p></div>
+          <p>Then in the app: <span class="kbd">⌘K</span> → <strong>connect</strong> (or the sidebar's <em>add account</em>) → <strong>sign in with Google</strong>. boxtty opens your browser, runs the auth-code + <strong>PKCE</strong> flow against a one-shot loopback listener on <code>127.0.0.1:8000</code>, and stores the token in <code>~/.config/boxtty/tokens-&lt;email&gt;.json</code>. No password ever touches the app. It auto-connects on the next launch.</p>
+        </section>
+
+        <section id="accounts">
+          <h2>Multiple accounts</h2>
+          <p>Run <strong>connect</strong> again to add another Gmail account. boxtty merges them into one unified inbox: each row carries a per-account colour stripe, each account gets its own push connection, and replies are sent from the account that owns the thread automatically.</p>
+          <p>Manage accounts from the connect sheet — remove one with the <span class="kbd">✕</span> next to it. Tokens are stored per account; an upgrade from a single-account install migrates automatically.</p>
+        </section>
+
+        <section id="keyboard">
+          <h2>Keyboard</h2>
+          <p>boxtty is built to run from the home row. A <span class="kbd">⌘K</span> command palette exposes everything else.</p>
+          <table class="doc-table">
+            <thead><tr><th>Key</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td><span class="kbd">j</span> / <span class="kbd">k</span></td><td>Move cursor down / up (preview as you go)</td></tr>
+              <tr><td><span class="kbd">enter</span> / <span class="kbd">l</span></td><td>Open thread</td></tr>
+              <tr><td><span class="kbd">h</span> / <span class="kbd">esc</span></td><td>Back to list / clear selection</td></tr>
+              <tr><td><span class="kbd">e</span></td><td>Archive</td></tr>
+              <tr><td><span class="kbd">⌫</span></td><td>Trash</td></tr>
+              <tr><td><span class="kbd">s</span></td><td>Star</td></tr>
+              <tr><td><span class="kbd">u</span></td><td>Toggle read / unread</td></tr>
+              <tr><td><span class="kbd">r</span> / <span class="kbd">f</span></td><td>Reply / forward</td></tr>
+              <tr><td><span class="kbd">z</span></td><td>Snooze</td></tr>
+              <tr><td><span class="kbd">x</span></td><td>Select row (multi-select)</td></tr>
+              <tr><td><span class="kbd">c</span> / <span class="kbd">⌘N</span></td><td>Compose</td></tr>
+              <tr><td><span class="kbd">⌘K</span></td><td>Command palette</td></tr>
+              <tr><td><span class="kbd">⌘B</span></td><td>Toggle sidebar</td></tr>
+              <tr><td><span class="kbd">⌘0</span></td><td>All inboxes</td></tr>
+              <tr><td><span class="kbd">⇧⌘D</span></td><td>Toggle density</td></tr>
+              <tr><td><span class="kbd">⌘Z</span></td><td>Undo last archive / trash / snooze</td></tr>
+            </tbody>
+          </table>
+          <p>Single-key bindings are remappable under <strong>Settings → Keyboard</strong> (or the <code>keymap</code> table in <code>config.toml</code>).</p>
+        </section>
+
+        <section id="search">
+          <h2>Search</h2>
+          <p>The search field combines free text with operators:</p>
+          <table class="doc-table">
+            <thead><tr><th>Operator</th><th>Matches</th></tr></thead>
+            <tbody>
+              <tr><td><code>from:</code></td><td>Sender name or address</td></tr>
+              <tr><td><code>is:unread</code></td><td>Unread threads</td></tr>
+              <tr><td><code>is:read</code></td><td>Read threads</td></tr>
+              <tr><td><code>is:starred</code></td><td>Starred threads</td></tr>
+            </tbody>
+          </table>
+          <p>Combine freely with free text, e.g. <code>from:linear is:unread deploy</code>. Searching reaches the server, so older matches outside the synced window are paged in.</p>
+        </section>
+
+        <section id="compose">
+          <h2>Compose</h2>
+          <p>Open the composer with <span class="kbd">c</span>, <span class="kbd">⌘N</span>, or a reply / forward. It includes:</p>
+          <ul>
+            <li><strong>Recipient autocomplete</strong> — a dropdown of everyone you've corresponded with, matched on name or address, with already-entered recipients filtered out. Pick with <span class="kbd">↑</span><span class="kbd">↓</span> + <span class="kbd">return</span>/<span class="kbd">tab</span>, or click.</li>
+            <li><strong>Shorthand snippets</strong> — one-click sign-offs and openers above the body.</li>
+            <li><strong>Markdown shortcuts</strong> — <code>**bold**</code>, <code>_italic_</code>, <code>[text](url)</code>, and backtick <code>code</code> compile to HTML on send (toggle in settings).</li>
+            <li><strong>Undo send</strong> — a window (configurable, off by default) where the message can be pulled back before it leaves.</li>
+            <li><strong>Schedule send</strong> — the clock menu sends later at a chosen time.</li>
+          </ul>
+          <p>Sent mail lands in <strong>Sent</strong>; replies thread correctly and quote the prior message collapsed.</p>
+        </section>
+
+        <section id="snooze">
+          <h2>Snooze &amp; schedule</h2>
+          <p>Press <span class="kbd">z</span> to snooze a thread out of the inbox until later — it moves to the <strong>Snoozed</strong> folder and pops back when due. Scheduled sends and snoozes are stored locally and survive relaunch; due items fire whenever the app is running.</p>
+        </section>
+
+        <section id="filters">
+          <h2>Filters</h2>
+          <p>Rules run automatically against newly-arrived threads. Each rule matches on <strong>sender</strong> or <strong>subject</strong> (contains / does-not-contain / is) and applies an action: archive, trash, mark read, or star. Manage them under <strong>Settings → Filters</strong>; run them across the current inbox on demand.</p>
+        </section>
+
+        <section id="ai">
+          <h2>AI assist</h2>
+          <p>From a thread, ask boxtty to <strong>summarize</strong>, draft a <strong>smart reply</strong>, or pull out <strong>action items</strong>. Pick the provider under <strong>Settings → AI</strong>:</p>
+          <table class="doc-table">
+            <thead><tr><th>Provider</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Apple Intelligence</strong></td><td>On-device, no key, nothing leaves your Mac. Default. Needs macOS 26+.</td></tr>
+              <tr><td>Anthropic (Claude)</td><td>API key</td></tr>
+              <tr><td>OpenAI</td><td>API key; custom base URL supported</td></tr>
+              <tr><td>Google Gemini</td><td>API key</td></tr>
+              <tr><td>Ollama</td><td>Local models, no key; point at your Ollama host</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="settings">
+          <h2>Settings</h2>
+          <p>Everything is a key in <code>~/.config/boxtty/config.toml</code>, watched and applied <strong>live</strong> — or use the in-app settings sheet. The single <code>accent</code> knob re-themes the entire UI (<code>oklch(L C H [/ a])</code> or <code>#RRGGBB</code>).</p>
+          <p>Common keys:</p>
+          <table class="doc-table">
+            <thead><tr><th>Key</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>theme.mode</code></td><td><code>light</code> / <code>dark</code> / <code>system</code></td></tr>
+              <tr><td><code>accent</code></td><td>Brand colour for the whole UI</td></tr>
+              <tr><td><code>mark_read_on_open</code></td><td>Mark a thread read when opened</td></tr>
+              <tr><td><code>notify_on_arrival</code></td><td>Notification on new mail</td></tr>
+              <tr><td><code>block_remote_images</code></td><td>Strip remote images until you allow them</td></tr>
+              <tr><td><code>undo_send_seconds</code></td><td>Undo-send window length</td></tr>
+              <tr><td><code>markdown_compose</code></td><td>Compile Markdown on send</td></tr>
+              <tr><td><code>signature</code></td><td>Stored in <code>signature.txt</code></td></tr>
+              <tr><td><code>ai.provider</code> / <code>ai.key</code> / <code>ai.model</code></td><td>AI assist configuration</td></tr>
+              <tr><td><code>keymap</code></td><td>Remap single-key actions</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="cli">
+          <h2>CLI</h2>
+          <p>While the app is running it hosts a Unix-socket control server at <code>~/.config/boxtty/control.sock</code>. The <code>boxtty</code> tool is a thin client:</p>
+          <pre><code>boxtty               # no args → opens the GUI
+boxtty commands      # full verb list
+boxtty list          # current folder as a table
+boxtty unread        # inbox unread count
+boxtty archive 102   # archive / trash / star / read / snooze &lt;id&gt;
+boxtty select starred
+boxtty send --to a@b.com --subject hi --body "from the cli"</code></pre>
+        </section>
+
+        <section id="lua">
+          <h2>Lua scripting</h2>
+          <p>boxtty embeds Lua 5.4. <code>boxtty run [script.lua]</code> (default <code>~/.config/boxtty/init.lua</code>) runs your script with a <code>boxtty</code> table that drives the app over the same socket:</p>
+          <pre><code>for _, t in ipairs(boxtty.list().threads) do
+  if t.from == "GitHub" then boxtty.archive(t.id) end
+end
+
+print("unread: " .. boxtty.unread())
+
+boxtty.send{ to = "a@b.com", subject = "hi", body = "sent from lua" }</code></pre>
+          <p>The CLI verbs and Lua functions are the same surface: <code>list · unread · count · folders · selected · open · archive · trash · star · read · snooze · unsnooze · reply · forward · select · search · reload · compose · send</code>. See <code>examples/init.lua</code> in the repo.</p>
+        </section>
+
+        <section id="troubleshooting">
+          <h2>Troubleshooting</h2>
+          <h3>Auth fails or mail won't load</h3>
+          <p>Confirm <code>oauth.toml</code> has <code>http://127.0.0.1:8000</code> as a redirect URI and the <code>https://mail.google.com/</code> scope. Re-run <strong>connect</strong> from <span class="kbd">⌘K</span>.</p>
+          <h3>New mail isn't instant</h3>
+          <p>Push uses IMAP <code>IDLE</code>; if your network blocks it boxtty falls back to periodic sync. Reads still reconcile on reload.</p>
+          <h3>Self-check</h3>
+          <p>Verify the core logic asserts on your build:</p>
+          <pre><code>dist/Boxtty.app/Contents/MacOS/Boxtty --selfcheck   # exits 0 / 1</code></pre>
+          <p class="doc-meta">More questions? Open an issue on <a class="ilink" href="https://github.com/notnaki/boxtty">GitHub</a>.</p>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap inner">
+      <span>boxtty</span>
+      <span class="spacer"></span>
+      <a href="features.html">Features</a>
+      <a href="https://github.com/notnaki/boxtty">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>
