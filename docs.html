@@ -168,6 +168,7 @@ client_secret = "…"</code></pre>
               <tr><td>Ollama</td><td>Local models, no key; point at your Ollama host</td></tr>
             </tbody>
           </table>
+          <p><strong>Auto-labeling</strong> (opt-in): give boxtty a list of labels and it classifies each arriving inbox message into one with your AI provider, creating and applying the Gmail label automatically. Enable it under Settings → AI.</p>
         </section>
 
         <section id="settings">
@@ -214,6 +215,16 @@ print("unread: " .. boxtty.unread())
 
 boxtty.send{ to = "a@b.com", subject = "hi", body = "sent from lua" }</code></pre>
           <p>The CLI verbs and Lua functions are the same surface: <code>list · unread · count · folders · selected · open · archive · trash · star · read · snooze · unsnooze · reply · forward · select · search · reload · compose · send</code>. See <code>examples/init.lua</code> in the repo.</p>
+
+          <h3>Event hooks</h3>
+          <p>Drop a script at <code>~/.config/boxtty/hooks.lua</code> and boxtty runs it whenever something happens — currently <code>message_received</code> on new mail. The event is passed in the environment and the script acts through the same <code>boxtty.*</code> API:</p>
+          <pre><code>-- ~/.config/boxtty/hooks.lua
+if os.getenv("BOXTTY_EVENT") == "message_received" then
+  local id   = tonumber(os.getenv("BOXTTY_THREAD_ID"))
+  local from = os.getenv("BOXTTY_FROM")
+  if from:find("GitHub") then boxtty.archive(id) end
+end</code></pre>
+          <p>Variables: <code>BOXTTY_EVENT</code>, <code>BOXTTY_THREAD_ID</code>, <code>BOXTTY_FROM</code>, <code>BOXTTY_FROM_EMAIL</code>, <code>BOXTTY_SUBJECT</code>, <code>BOXTTY_ACCOUNT</code>. See <code>examples/hooks.lua</code>.</p>
         </section>
 
         <section id="troubleshooting">
